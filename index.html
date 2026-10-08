@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI 时代个人说明书 · 想想</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Quicksand:wght@500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --rose:#d989b8; --rose-deep:#a64d7d; --rose-soft:#f9e3f0;
+    --lav:#9f8ec4; --lav-deep:#6d5a94;
+    --ink:#4a4046; --ink-soft:#8a7a84;
+    --paper:#fffdfb;
+    --font-title:"ZCOOL KuaiLe","PingFang SC","Microsoft YaHei",sans-serif;
+    --font-body:"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;
+    --font-latin:"Quicksand","Noto Sans SC",sans-serif;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; }
+  body{
+    font-family:var(--font-body); color:var(--ink);
+    background:linear-gradient(165deg,#f6dce9 0%,#e7d6ef 48%,#dbe4f4 100%);
+    min-height:100dvh; overflow-x:hidden;
+  }
+  body.locked{ overflow:hidden; }
+
+  /* ===== 氛围场景（填充海报周围的“空”） ===== */
+  .scene{ position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; }
+  .bokeh{ position:absolute; border-radius:50%; filter:blur(40px); opacity:.5; }
+  .b1{ width:340px; height:340px; left:-60px; top:8%;  background:radial-gradient(circle,#ffd6ea,transparent 70%); }
+  .b2{ width:420px; height:420px; right:-80px; top:30%; background:radial-gradient(circle,#d8caf3,transparent 70%); }
+  .b3{ width:300px; height:300px; left:18%; bottom:-60px; background:radial-gradient(circle,#cfe0fb,transparent 70%); }
+  .moon-glow{ position:absolute; width:260px; height:260px; left:50%; top:-70px; transform:translateX(-50%);
+    background:radial-gradient(circle,rgba(255,247,224,.9),transparent 65%); filter:blur(8px); }
+  .sparkle{ position:absolute; width:14px; height:14px; opacity:.0;
+    background:
+      radial-gradient(circle at 50% 50%, #fff 0 18%, transparent 20%),
+      conic-gradient(from 0deg, transparent 44%, #fff7e0 46% 54%, transparent 56%);
+    clip-path:polygon(50% 0,58% 42%,100% 50%,58% 58%,50% 100%,42% 58%,0 50%,42% 42%);
+    animation:twinkle 7s ease-in-out infinite; }
+  @keyframes twinkle{
+    0%,100%{ opacity:.15; transform:scale(.7) rotate(0deg); }
+    50%{ opacity:.95; transform:scale(1.05) rotate(20deg); }
+  }
+
+  /* ===== 顶栏（漂浮玻璃条） ===== */
+  .topbar{
+    position:fixed; z-index:30; top:16px; left:50%; transform:translateX(-50%);
+    display:flex; align-items:center; gap:10px 14px; flex-wrap:wrap; justify-content:center;
+    padding:11px 22px; max-width:min(94vw,860px);
+    background:rgba(255,255,255,.55); border:1px solid rgba(255,255,255,.7);
+    border-radius:999px; backdrop-filter:blur(10px);
+    box-shadow:0 10px 30px rgba(120,80,130,.18);
+  }
+  .topbar .t{ font-family:var(--font-title); font-size:21px; color:var(--rose-deep); }
+  .topbar .sub{ font-size:13px; color:var(--ink-soft); }
+  .topbar .hint{
+    font-size:12.5px; color:#fff; background:var(--rose);
+    padding:4px 12px; border-radius:999px; transition:opacity .6s ease;
+  }
+  .topbar .hint.dim{ opacity:0; }
+
+  /* ===== 海报区 ===== */
+  .stage{ position:relative; z-index:10; min-height:100dvh; display:flex; align-items:center; justify-content:center; padding:84px 16px 24px; }
+  .poster{
+    position:relative;
+    height:min(calc(100dvh - 118px), calc(94vw / 1.2482));
+    aspect-ratio:1242/995; max-width:94vw;
+  }
+  .poster > img{
+    width:100%; height:100%; display:block; object-fit:contain;
+    border-radius:22px;
+    box-shadow:0 30px 70px rgba(90,60,110,.28);
+  }
+
+  /* ===== 热点：透明命中区 + 会动的小提示，而不是大圈 ===== */
+  .hotspot{
+    position:absolute; width:9.5%; aspect-ratio:1;
+    transform:translate(-50%,-50%);
+    border:none; background:transparent; padding:0; cursor:pointer;
+    transition:transform .25s ease;
+  }
+  .hotspot .cue{
+    position:absolute; left:50%; top:50%; width:16px; height:16px;
+    transform:translate(-50%,-50%);
+    background:#fff;
+    clip-path:polygon(50% 0,58% 42%,100% 50%,58% 58%,50% 100%,42% 58%,0 50%,42% 42%);
+    filter:drop-shadow(0 0 7px rgba(217,137,184,.95));
+    animation:cuebob 2.6s ease-in-out infinite;
+  }
+  .hotspot .cue::after{
+    content:""; position:absolute; left:50%; top:50%; width:24px; height:24px;
+    transform:translate(-50%,-50%); border-radius:50%;
+    border:2px solid rgba(255,255,255,.7);
+    animation:cuepulse 2.6s ease-out infinite;
+  }
+  .hotspot:nth-of-type(even) .cue,
+  .hotspot:nth-of-type(even) .cue::after{ animation-delay:.7s; }
+  @keyframes cuebob{
+    0%,100%{ transform:translate(-50%,-50%) scale(1); }
+    50%{ transform:translate(-50%,-58%) scale(1.15); }
+  }
+  @keyframes cuepulse{
+    0%{ transform:translate(-50%,-50%) scale(.4); opacity:.8; }
+    100%{ transform:translate(-50%,-50%) scale(1.5); opacity:0; }
+  }
+  .hotspot:hover, .hotspot:focus-visible{ transform:translate(-50%,-50%) scale(1.18); }
+  .hotspot.active{ transform:translate(-50%,-50%) scale(1.25); }
+  .hotspot.active .cue{ background:var(--rose); animation:none; }
+  .hotspot.active .cue::after{ animation:none; opacity:.55; border-color:var(--rose); transform:translate(-50%,-50%) scale(1.05); }
+  .hotspot .tip{
+    position:absolute; bottom:calc(100% + 9px); left:50%; transform:translateX(-50%) translateY(4px);
+    background:rgba(255,255,255,.96); color:var(--rose-deep);
+    font-family:var(--font-title); font-size:13px; white-space:nowrap;
+    padding:4px 12px; border-radius:999px;
+    box-shadow:0 4px 14px rgba(120,80,130,.25);
+    opacity:0; pointer-events:none; transition:all .22s ease;
+  }
+  .hotspot:hover .tip, .hotspot:focus-visible .tip{ opacity:1; transform:translateX(-50%) translateY(0); }
+  .hotspot .check{
+    position:absolute; top:-4px; right:-4px; width:20px; height:20px;
+    border-radius:50%; background:var(--rose); color:#fff;
+    font-size:12px; display:none; align-items:center; justify-content:center;
+    box-shadow:0 2px 8px rgba(150,80,120,.4);
+  }
+  .hotspot.visited .check{ display:flex; }
+
+  /* 首次引导：小兔身上的“点我” */
+  .guide{ position:absolute; z-index:12; left:50%; top:42%; transform:translate(-50%,-50%);
+    pointer-events:none; font-family:var(--font-title); color:var(--rose-deep);
+    background:rgba(255,255,255,.9); padding:6px 14px; border-radius:999px;
+    box-shadow:0 6px 18px rgba(150,80,120,.3); font-size:14px;
+    animation:bob 1.8s ease-in-out infinite; transition:opacity .5s ease; }
+  .guide.gone{ opacity:0; }
+  @keyframes bob{ 0%,100%{ transform:translate(-50%,-50%); } 50%{ transform:translate(-50%,calc(-50% - 8px)); } }
+
+  /* ===== 目录侧栏 ===== */
+  .legend{
+    position:fixed; z-index:30; right:18px; top:50%; transform:translateY(-50%);
+    width:208px; padding:14px 12px 12px;
+    background:rgba(255,255,255,.6); border:1px solid rgba(255,255,255,.7);
+    border-radius:20px; backdrop-filter:blur(10px);
+    box-shadow:0 14px 36px rgba(120,80,130,.2);
+  }
+  .legend h4{ margin:0 0 10px; font-family:var(--font-title); font-size:15px; color:var(--rose-deep);
+    display:flex; align-items:center; justify-content:space-between; }
+  .legend .toggle{ cursor:pointer; border:none; background:transparent; color:var(--ink-soft); font-size:16px; line-height:1; }
+  .legend .items{ display:flex; flex-direction:column; gap:6px; }
+  .legend.collapsed .items{ display:none; }
+  .legend.collapsed{ width:auto; padding:8px 12px; }
+  .legend.collapsed h4{ margin:0; }
+  .legend.collapsed .lt-title{ display:none; }
+  .litem{
+    display:flex; align-items:center; gap:9px; width:100%; text-align:left;
+    border:none; cursor:pointer; background:rgba(255,255,255,.5);
+    padding:8px 10px; border-radius:12px; color:var(--ink); font-family:var(--font-body); font-size:13.5px;
+    transition:transform .18s ease, background .18s ease;
+  }
+  .litem:hover{ transform:translateX(3px); background:#fff; }
+  .litem .ic{ width:22px; display:flex; align-items:center; justify-content:center; color:var(--rose-deep); flex-shrink:0; }
+  .litem .ic svg{ width:20px; height:20px; display:block; }
+  .card-head .num svg{ width:18px; height:18px; display:block; }
+  .litem .nm{ flex:1; }
+  .litem .done{ color:var(--rose); font-size:12px; opacity:0; }
+  .litem.seen .done{ opacity:1; }
+  .legend .progress{ margin-top:11px; font-size:12px; color:var(--ink-soft); text-align:center; }
+  .legend .progress b{ color:var(--rose-deep); font-family:var(--font-latin); }
+  .legend .bar{ height:6px; border-radius:6px; background:rgba(217,137,184,.2); margin-top:6px; overflow:hidden; }
+  .legend .bar i{ display:block; height:100%; width:0; background:linear-gradient(90deg,var(--rose),var(--lav));
+    border-radius:6px; transition:width .5s ease; }
+  .legend .all-done{ display:none; margin-top:8px; font-size:12px; color:var(--rose-deep); text-align:center; }
+  .legend.complete .all-done{ display:block; }
+
+  /* ===== 弹窗卡片 ===== */
+  .overlay{
+    position:fixed; inset:0; z-index:100;
+    background:rgba(80,55,95,.4); backdrop-filter:blur(6px);
+    display:none; align-items:center; justify-content:center; padding:24px;
+  }
+  .overlay.open{ display:flex; }
+  .card{
+    display:none; position:relative;
+    width:min(720px, 94vw); max-height:86vh;
+    background:linear-gradient(180deg,#fff 0%, #fdf2f8 100%);
+    border:1px solid rgba(210,150,190,.4);
+    border-radius:26px;
+    box-shadow:0 30px 80px rgba(70,40,90,.4);
+    overflow:hidden;
+  }
+  .card.show{ display:flex; flex-direction:column;
+    animation:enter .42s cubic-bezier(.22,1,.36,1); }
+  .card.from-left.show{ transform-origin:left center; }
+  .card.from-right.show{ transform-origin:right center; }
+  @keyframes enter{
+    from{ transform:translateX(var(--tx,-34px)) scale(.93); opacity:0; }
+    to{ transform:none; opacity:1; }
+  }
+
+  .card-head{
+    display:flex; align-items:center; gap:12px;
+    padding:18px 56px 14px 24px;
+    border-bottom:2px dashed rgba(217,137,184,.35);
+    background:linear-gradient(90deg,#fbe9f4,#f6e6fa);
+    position:relative; flex-shrink:0;
+  }
+  .card-head .num{
+    font-family:var(--font-latin); font-weight:700; font-size:15px;
+    color:#fff; background:var(--rose);
+    width:34px; height:34px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    box-shadow:0 3px 10px rgba(150,80,120,.35);
+  }
+  .card-head .ct{ font-family:var(--font-title); font-size:21px; color:var(--rose-deep); margin:0; }
+  .card-close{
+    position:absolute; top:12px; right:12px; width:34px; height:34px;
+    border-radius:50%; border:none; cursor:pointer;
+    background:rgba(255,255,255,.85); color:var(--rose-deep);
+    font-size:17px; line-height:1;
+    box-shadow:0 2px 10px rgba(150,80,120,.25);
+    transition:transform .2s ease;
+  }
+  .card-close:hover{ transform:rotate(90deg) scale(1.06); }
+
+  .card-body{ padding:20px 26px 28px; overflow-y:auto; font-size:15.5px; line-height:1.95; }
+  .card-body::-webkit-scrollbar{ width:8px; }
+  .card-body::-webkit-scrollbar-thumb{ background:#e8c3dc; border-radius:8px; }
+  .card-body p{ margin:9px 0; }
+  .card-body strong{ color:var(--rose-deep); }
+  .card-body h3{ font-family:var(--font-title); font-weight:400; font-size:19px; color:var(--rose-deep);
+    margin:24px 0 8px; padding-left:12px; border-left:4px solid #eebfe0; }
+  .card-body h3:first-child{ margin-top:2px; }
+  .card-body h4{ font-size:15.5px; color:#7d5a75; margin:18px 0 4px; font-weight:700; }
+  .card-body blockquote{ margin:12px 0; padding:10px 16px; background:#faf0f7;
+    border-left:3px solid #e3aed2; border-radius:4px 12px 12px 4px; color:#6d5568; }
+  .card-body ul{ list-style:none; padding:0; margin:8px 0; }
+  .card-body li{ position:relative; padding-left:20px; margin:5px 0; }
+  .card-body li::before{ content:"♡"; position:absolute; left:2px; top:0; color:#d989b8; font-size:12px; }
+  .keys{ display:flex; flex-wrap:wrap; gap:8px; margin:10px 0; }
+  .keys .k{ background:var(--rose-soft); color:var(--rose-deep); font-weight:700; font-size:14.5px;
+    padding:6px 14px; border-radius:999px; }
+
+  /* 手机端：底部抽屉 + 目录变底栏 */
+  @media (max-width:760px){
+    .topbar{ top:10px; padding:9px 16px; }
+    .topbar .t{ font-size:18px; }
+    .topbar .sub{ display:none; }
+    .stage{ padding:74px 10px 96px; }
+    .poster{ height:min(calc(100dvh - 170px), calc(94vw / 1.2482)); }
+    .guide{ top:40%; }
+
+    .legend{ top:auto; bottom:12px; right:12px; left:12px; width:auto; transform:none;
+      display:flex; flex-direction:column; padding:10px 12px; }
+    .legend h4{ margin:0 0 8px; }
+    .legend .toggle{ display:none; }
+    .legend .items{ flex-direction:row; flex-wrap:nowrap; overflow-x:auto; gap:8px; padding-bottom:4px; }
+    .litem{ flex:0 0 auto; width:auto; }
+    .litem .nm{ display:none; }
+    .litem .ic{ font-size:20px; width:auto; }
+    .legend .progress, .legend .bar, .legend .all-done{ display:none; }
+
+    .overlay{ padding:0; align-items:flex-end; }
+    .card{ width:100vw; max-height:80vh; border-radius:22px 22px 0 0; }
+    .card.show{ animation:rise .4s cubic-bezier(.22,1,.36,1); transform-origin:bottom center; }
+    @keyframes rise{ from{ transform:translateY(46px) scale(.98); opacity:0; } to{ transform:none; opacity:1; } }
+    .card-body{ padding:16px 18px 26px; font-size:15px; }
+    .card-head .ct{ font-size:18px; }
+  }
+  @media (prefers-reduced-motion:reduce){
+    .sparkle,.hotspot,.guide{ animation:none !important; }
+    .sparkle{ opacity:.5; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 氛围场景：让海报周围有“被布置过”的感觉 -->
+<div class="scene" aria-hidden="true">
+  <div class="moon-glow"></div>
+  <div class="bokeh b1"></div>
+  <div class="bokeh b2"></div>
+  <div class="bokeh b3"></div>
+  <span class="sparkle" style="left:8%;top:14%;animation-delay:0s"></span>
+  <span class="sparkle" style="left:24%;top:62%;animation-delay:1.2s"></span>
+  <span class="sparkle" style="left:70%;top:18%;animation-delay:2.1s"></span>
+  <span class="sparkle" style="left:88%;top:40%;animation-delay:3s"></span>
+  <span class="sparkle" style="left:46%;top:78%;animation-delay:1.8s"></span>
+  <span class="sparkle" style="left:60%;top:70%;animation-delay:3.6s"></span>
+  <span class="sparkle" style="left:14%;top:44%;animation-delay:2.6s"></span>
+  <span class="sparkle" style="left:82%;top:74%;animation-delay:.8s"></span>
+  <span class="sparkle" style="left:36%;top:30%;animation-delay:4.2s"></span>
+  <span class="sparkle" style="left:94%;top:14%;animation-delay:2.9s"></span>
+</div>
+
+<!-- 顶栏 -->
+<div class="topbar">
+  <span class="t">AI 时代个人说明书</span>
+  <span class="sub">想想 ｜ 怎么和我一起把事情做下去</span>
+  <span class="hint" id="hint">点图里的元素，认识一下吧 ♡</span>
+</div>
+
+<!-- 目录侧栏 -->
+<aside class="legend" id="legend">
+  <h4><span class="lt-title">这份说明书的目录</span>
+    <button class="toggle" id="legToggle" aria-label="折叠/展开目录">⟨</button></h4>
+  <div class="items" id="legItems"><!-- JS 注入 --></div>
+  <div class="progress">已探索 <b id="pv">0</b> / 8</div>
+  <div class="bar"><i id="pbar"></i></div>
+  <div class="all-done">♡ 你已经认识完整的我啦</div>
+</aside>
+
+<!-- 海报 -->
+<div class="stage">
+  <div class="poster" id="poster">
+    <img src="poster.jpg" alt="艾丝乐小兔万圣节海报：小兔巫师骑着扫帚飞过月亮" />
+    <div class="guide" id="guide">点我看看我是谁 ♡</div>
+
+    <!-- 热点坐标（百分比，相对海报图）：
+         bunny 50,54→01 | broom 63.5,65.2→02 | bat 73.6,19 & 26.9,62→03
+         star 13.4,42.2 & 35.6,69.4 & 86.6,63.1 & 75.9,38.8→04
+         cloud 68.1,27.2 & 87,45.7 & 13.4,56.7 & 57.4,21.6→05
+         turtle 61,59→06 | moon 50,39→07 | cauldron 77.3,81→AI
+         pumpkin 24.3,80→开场白 | fence 14.8,76 & 83.3,76.5→你好呀 -->
+    <button class="hotspot" data-card="m01" style="left:50%;top:54%" aria-label="01 我的身份定位"><span class="tip">01 · 我的身份定位</span><span class="check">✓</span></button>
+    <button class="hotspot" data-card="m02" style="left:63.5%;top:65.2%" aria-label="02 我的任务系统"><span class="tip">02 · 我的任务系统</span><span class="check">✓</span></button>
+    <button class="hotspot" data-card="m03" style="left:73.6%;top:19%" aria-label="03 我的沟通系统"><span class="tip">03 · 我的沟通系统</span><span class="check">✓</span></button>
+    <button class="hotspot" data-card="m03" style="left:26.9%;top:62%" aria-label="03 我的沟通系统"><span class="tip">03 · 我的沟通系统</span><span class="check">✓</span></button>
+    <button class="hotspot" data-card="m04" style="left:13.4%;top:42.2%" aria-label="04 我的反馈系统"><span class="tip">04 · 我的反馈系统</span><span class="check">✓</span></button>
+    <button class="hotspot" data-card="m04" style="left:35.6%;top:69.4%" aria-label="04 我的反馈系统"><span class="tip">04 · 我的反馈系统</span><span class="check">✓</span></button>
+    <button class="hotspot" data-card="m04" style="left:86.6%;top:63.1%" aria-label="04 我的反馈系统"><span class="tip">04 · 我的反馈系统</span><span class="check">✓</span></button>
+    <button class="hotspot" data-card="m04" style="left:75.9%;top:38.8%" aria-label="04 我的反馈系统"><span class="tip">04 · 我的反馈系统</span><span class="check">✓</span></button>
+    <button class="hotspot" data-card="m05" style="left:68.1%;top:27.2%" aria-label="05 我的压力预警系统"><span class="tip">05 · 我的压力预警系统</span><span class="check">✓</span></button>
+    <button class="hotspot" data-card="m05" style="left:87%;top:45.7%" aria-label="05 我的压力预警系统"><span class="tip">05 · 我的压力预警系统</span><span class="check">✓</span></button>
+    <button class="hotspot" data-card="m05" style="left:13.4%;top:56.7%" aria-label="05 我的压力预警系统"><span class="tip">05 · 我的压力预警系统</span><span class="check">✓</span></button>
+    <button class="hotspot" data-card="m05" style="left:57.4%;top:21.6%" aria-label="05 我的压力预警系统"><span class="tip">05 · 我的压力预警系统</span><span class="check">✓</span></button>
+    <button class="hotspot" data-card="m06" style="left:61%;top:59%" aria-label="06 我的支持系统"><span class="tip">06 · 我的支持系统</span><span class="check">✓</span></button>
+    <button class="hotspot" data-card="m07" style="left:50%;top:39%" aria-label="07 我的团队使用说明"><span class="tip">07 · 我的团队使用说明</span><span class="check">✓</span></button>
+    <button class="hotspot" data-card="mai" style="left:77.3%;top:81%" aria-label="AI 在这份说明书里做了什么"><span class="tip">AI · 协作说明</span><span class="check">✓</span></button>
+    <button class="hotspot" data-card="m00" style="left:24.3%;top:80%" aria-label="开场白"><span class="tip">🎃 开场白</span><span class="check">✓</span></button>
+    <button class="hotspot" data-card="mhi" style="left:14.8%;top:76%" aria-label="你好呀"><span class="tip">👋 你好呀</span><span class="check">✓</span></button>
+    <button class="hotspot" data-card="mhi" style="left:83.3%;top:76.5%" aria-label="你好呀"><span class="tip">👋 你好呀</span><span class="check">✓</span></button>
+  </div>
+</div>
+
+<!-- 卡片层 -->
+<div class="overlay" id="overlay">
+
+  <!-- 00 开场白（南瓜彩蛋） -->
+  <article class="card" data-key="m00" role="dialog" aria-modal="true" aria-label="开场白">
+    <div class="card-head"><span class="num"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7c-3-1-6 0-6 4s3 6 6 6 6-2 6-6-3-5-6-4z"/><path d="M12 7V4.5M11 3h2"/></svg></span><h2 class="ct">开场白</h2><button class="card-close" data-close>✕</button></div>
+    <div class="card-body">
+      <p>我不太想把自己包装成一个“什么任务都能做好”的人。</p>
+      <p>我更希望这份说明书能让别人知道：<strong>我擅长什么、什么情况下我会发挥得比较好、我什么时候容易卡住</strong>，以及如果我们之后真的一起做事，怎样合作会比较舒服。</p>
+    </div>
+  </article>
+
+  <!-- 你好呀（栅栏彩蛋） -->
+  <article class="card" data-key="mhi" role="dialog" aria-modal="true" aria-label="你好呀">
+    <div class="card-head"><span class="num"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13c2-3 4-3 5 0 1-3 3-3 4 0 1-2 2.5-2 3.5-.5"/><path d="M4 13v4c0 1.5 1 2.5 3 2.5h5c3 0 5-2 5-5v-3"/></svg></span><h2 class="ct">你好呀</h2><button class="card-close" data-close>✕</button></div>
+    <div class="card-body">
+      <p>我是<strong>想想</strong>，很高兴认识你 ♡</p>
+      <p>这张海报上的每个小角落都可能藏着一张卡片——月亮、云朵、小乌龟、南瓜……慢慢逛，你会更完整地认识我。</p>
+    </div>
+  </article>
+
+  <!-- 01 身份定位（小兔） -->
+  <article class="card" data-key="m01" role="dialog" aria-modal="true" aria-label="01 我的身份定位">
+    <div class="card-head"><span class="num">01</span><h2 class="ct">我的身份定位</h2><button class="card-close" data-close>✕</button></div>
+    <div class="card-body">
+      <h3>1. 我是谁？</h3>
+      <p><strong>想想｜中山大学｜俄语专业｜大四</strong></p>
+      <p>我现在还是一个语言专业的学生，但我越来越不想把自己的身份只定义成“俄语专业”。</p>
+      <p>俄语是我目前比较明确的一项能力，但过去一段时间里，我一直在尝试把它和其他东西连接起来：海外市场、用户观察、内容、AI工具、信息搜集，以及一些自己感兴趣的产品和创意。</p>
+      <p>如果一定要给现在的自己一个定位，我更愿意说：</p>
+      <blockquote><strong>一个还在探索方向，但已经开始主动搭建自己能力组合的学生。</strong></blockquote>
+      <p>我目前还没有一个非常确定的职业身份，这反而是我参加这个项目的原因之一。</p>
+
+      <h3>2. 我为什么参加这个项目？</h3>
+      <p>我以前已经陆陆续续用 AI 做过一些事情。</p>
+      <p>比如用 AI 辅助做过市场调研、网站、视觉内容，也用 AI 帮助自己整理新闻、准备面试和分析问题。</p>
+      <p>但这些事情比较像一个个独立的小实验。</p>
+      <p>我发现自己真正缺的，不只是“会不会用 AI”，而是：</p>
+      <blockquote><strong>能不能把 AI 变成一种稳定的工作方式，并且真的拿它完成一个有明确目标、有协作、有交付的项目。</strong></blockquote>
+      <p>所以我参加北辰青年，不只是想学几个新的 AI 工具。</p>
+      <p>我更想体验一次真实的项目协作：从接到任务、理解需求，到自己做判断、调用 AI、和别人沟通、接受反馈，再把东西交付出来。</p>
+      <p>另外，我也希望通过这个过程看看：</p>
+      <blockquote><strong>我到底更适合什么样的工作，以及我现在这些看起来比较零散的兴趣和能力，能不能慢慢形成一个有方向的组合。</strong></blockquote>
+
+      <h3>3. 我希望 4 周结束后留下什么？</h3>
+      <p>我希望最后留下的不是一个“看起来很厉害”的成果，而是一套我以后还能继续使用的东西。</p>
+      <p>具体来说，我希望有：</p>
+      <ul>
+        <li>一段真正参与过完整项目的经历；</li>
+        <li>一份可以展示的作品或项目成果；</li>
+        <li>一套自己比较熟悉的 AI 协作工作流；</li>
+        <li>对自己适合什么任务、在哪些地方容易卡住，有更清楚的认识；</li>
+        <li>一种以后面对陌生任务时，可以真正拿来用的工作方法。</li>
+      </ul>
+      <p>如果 4 周之后，我能说：</p>
+      <blockquote><strong>“以前我只是会让 AI 帮我做东西，现在我知道怎么和 AI 一起把一件事情做完了。”</strong></blockquote>
+      <p>那我觉得这个项目对我来说就有意义。</p>
+    </div>
+  </article>
+
+  <!-- 02 任务系统（扫帚） -->
+  <article class="card" data-key="m02" role="dialog" aria-modal="true" aria-label="02 我的任务系统">
+    <div class="card-head"><span class="num">02</span><h2 class="ct">我的任务系统</h2><button class="card-close" data-close>✕</button></div>
+    <div class="card-body">
+      <h3>1. 我适合承担什么任务？</h3>
+      <h4>🔎 资料整理 / 信息搜集</h4>
+      <p>这是我目前比较有把握的一类任务。</p>
+      <p>我做过海外市场相关的信息搜集，也做过市场研究、俄语新闻阅读和资料整理。相比于只接收别人已经整理好的信息，我比较喜欢自己去找资料，再判断哪些值得留下。</p>
+      <p>我比较擅长的不是“搜很多”，而是：</p>
+      <blockquote><strong>从比较散的信息里找到重点，再重新组织成一个能被别人看懂的结构。</strong></blockquote>
+      <h4>👀 用户观察 / 研究</h4>
+      <p>我对“人为什么会这样想、为什么会这样选择”比较感兴趣。</p>
+      <p>之前做过问卷、实验参与者招募，也参与过大创实验项目。平时我自己也比较喜欢观察人的行为和关系，经常会追问一个现象背后的原因。</p>
+      <p>所以如果任务涉及：</p>
+      <ul>
+        <li>用户访谈整理</li>
+        <li>用户反馈整理</li>
+        <li>问卷结果梳理</li>
+        <li>用户画像</li>
+        <li>现象分析</li>
+        <li>用户需求观察</li>
+      </ul>
+      <p>这类任务我会比较有兴趣。</p>
+      <h4>💡 内容策划 / 创意发散</h4>
+      <p>我比较喜欢从一个还没有完全成型的想法开始，把它慢慢具体化。</p>
+      <p>比如一个产品想法、一个网站、一个内容主题，我通常不会一开始就知道最终应该长什么样，而是会经历：</p>
+      <blockquote>有一个模糊想法 → 找资料 → 和 AI 讨论 → 发现原来的想法不对 → 修改 → 再继续往下做。</blockquote>
+      <p>所以我比较适合参与前期的：</p>
+      <ul>
+        <li>选题</li>
+        <li>创意发散</li>
+        <li>内容框架</li>
+        <li>产品想法梳理</li>
+        <li>方案讨论</li>
+      </ul>
+      <h4>🤖 AI 协作</h4>
+      <p>这是我最近比较主动培养的一项能力。</p>
+      <p>我不会把 AI 当成“替我完成任务的人”，更像是把它当成一个可以不断讨论的协作者。</p>
+      <p>比如我做市场研究时，会让不同 AI 分别承担资料搜索、分析、结构梳理和网站制作等工作；做视觉项目时，也会先让 AI 帮我分析，再根据结果生成提示词。</p>
+      <p>我比较习惯的方式是：</p>
+      <blockquote><strong>AI 先给可能性 → 我判断 → 我修改 → AI继续执行。</strong></blockquote>
+      <p>所以我希望自己未来能够进一步形成自己的 AI 工作流，而不是单纯积累“用过哪些工具”。</p>
+      <h4>✍️ 写作表达 / 内容整理</h4>
+      <p>我比较在意表达是不是自然、是不是像人说的话。</p>
+      <p>有时候我宁愿多改几遍，也不太愿意直接使用一个“听起来很正确，但其实很空”的版本。</p>
+      <p>我的优势可能不是写得特别快，而是比较容易发现：</p>
+      <blockquote><strong>“这句话虽然没错，但不像我，也不像真实的人会说的话。”</strong></blockquote>
+      <h4>📊 PPT / Excel / 基础工具</h4>
+      <p>能够完成日常的信息整理、表格整理和基础 PPT 内容搭建。</p>
+      <p>但这不是目前我最突出的能力，所以如果任务特别依赖专业的数据建模或复杂的数据分析，我不会把自己放在最优先的位置。</p>
+
+      <h3>2. 我目前比较擅长什么？</h3>
+      <p>如果把目前的能力浓缩一下，我觉得比较适合我的关键词是：</p>
+      <blockquote><strong>信息搜集｜用户观察｜内容整理｜创意发散｜AI协作</strong></blockquote>
+      <p>我曾经做过比较有代表性的事情，是在海外市场实习期间搜集潜在客户信息，也做过市场研究和 EDM 内容相关工作。</p>
+      <p>另外，我自己也尝试过用 AI 做市场调研网站、产品创意和视觉内容。</p>
+      <p>这些事情看起来不完全属于同一个领域，但它们有一个共同点：</p>
+      <blockquote><strong>我喜欢从一个模糊的问题出发，自己找信息，再一点点把它变得具体。</strong></blockquote>
+
+      <h3>3. 我希望继续提升什么？</h3>
+      <p>我现在比较欠缺的是：</p>
+      <ul>
+        <li>把想法快速落地；</li>
+        <li>更成熟的项目推进能力；</li>
+        <li>数据分析；</li>
+        <li>更稳定的执行节奏；</li>
+        <li>在信息不完整的情况下快速做决定；</li>
+        <li>和团队一起完成一个长期项目的经验。</li>
+      </ul>
+      <p>所以我希望自己不是只停留在“想法很多”，而是慢慢变成一个<strong>能把想法真正交付出来的人</strong>。</p>
+
+      <h3>4. 什么样的任务能激发我？</h3>
+      <p>比较容易让我进入状态的任务通常有这些特点：</p>
+      <ul>
+        <li>有真实的问题需要解决；</li>
+        <li>能看到最终产出；</li>
+        <li>可以被别人使用或展示；</li>
+        <li>有一定的自由度；</li>
+        <li>可以自己查资料、做判断；</li>
+        <li>能接触真实的人或用户；</li>
+        <li>能学到一个新的方法；</li>
+        <li>最后能留下一个具体成果。</li>
+      </ul>
+      <p>尤其是当我觉得：</p>
+      <blockquote><strong>“这件事情真的有点意思，而且做完以后我能带走点什么。”</strong></blockquote>
+      <p>我的动力会明显高很多。</p>
+
+      <h3>5. 什么样的任务容易让我卡住？</h3>
+      <p>我比较容易卡住的情况不是“任务很难”，而是：</p>
+      <blockquote><strong>任务既模糊，又没有判断标准，但又希望我直接交一个完成版。</strong></blockquote>
+      <p>比如只告诉我：</p>
+      <blockquote>“你自己发挥一下。”</blockquote>
+      <p>如果没有目标、对象、案例或者至少一个大致的判断标准，我可能会开始想很多种可能性，反而不知道应该先做哪一种。</p>
+      <p>另外，如果一个任务的信息非常分散，或者过程中不断改变方向，我也容易重新进入“重新思考”的状态。</p>
+      <p>所以对我来说比较好的方式是：</p>
+      <blockquote><strong>先让我知道方向和边界，再让我自由发挥。</strong></blockquote>
+    </div>
+  </article>
+
+  <!-- 03 沟通系统（蝙蝠） -->
+  <article class="card" data-key="m03" role="dialog" aria-modal="true" aria-label="03 我的沟通系统">
+    <div class="card-head"><span class="num">03</span><h2 class="ct">我的沟通系统</h2><button class="card-close" data-close>✕</button></div>
+    <div class="card-body">
+      <h3>1. 给我安排任务时，请尽量说清楚这些</h3>
+      <p>我最希望知道：</p>
+      <div class="keys">
+        <span class="k">① 为什么做</span>
+        <span class="k">② 最后要交什么</span>
+        <span class="k">③ 什么时候交</span>
+        <span class="k">④ 做到什么程度算完成</span>
+        <span class="k">⑤ 哪些地方可以自由发挥</span>
+      </div>
+      <p>如果有参考案例，我通常会更容易进入状态。</p>
+      <p>我不需要别人把每一步都规定好。</p>
+      <p>相反，我比较喜欢：</p>
+      <blockquote><strong>目标清楚、边界清楚，但中间的做法可以自己决定。</strong></blockquote>
+      <h3>2. 我同步进度的方式</h3>
+      <p>我比较适合：</p>
+      <blockquote><strong>关键节点同步，而不是每做一步都汇报。</strong></blockquote>
+      <p>例如：</p>
+      <p><strong>接到任务 → 理解需求 → 做出第一版 → 同步 → 根据反馈修改 → 最终交付。</strong></p>
+      <p>如果遇到明显影响进度的问题，我会倾向于先自己整理一下，再主动说。</p>
+      <h3>3. 我遇到问题时，希望怎么沟通？</h3>
+      <p>我通常会先自己查资料、想办法。</p>
+      <p>如果自己解决不了，我比较希望带着一个具体的问题来问，而不是直接说：</p>
+      <blockquote>“我不会。”</blockquote>
+      <p>例如：</p>
+      <blockquote>“我现在有 A 和 B 两种方案，但不知道哪个更符合这次任务的目标，我倾向于 A，原因是……你觉得哪个方向更合适？”</blockquote>
+      <p>这种沟通方式对我来说比较有效。</p>
+      <p>如果负责人能直接告诉我：</p>
+      <blockquote><strong>“现在最重要的问题是这个，先别管其他的。”</strong></blockquote>
+      <p>我会比较容易继续往下推进。</p>
+      <h3>4. 我不太适应什么沟通方式？</h3>
+      <p>我比较不适应：</p>
+      <ul>
+        <li>只说“你自己看着办”；</li>
+        <li>只说“感觉不太对”，但不说哪里不对；</li>
+        <li>多个人同时给出互相冲突的要求；</li>
+        <li>临近截止时间突然改变核心需求；</li>
+        <li>信息散落在很多地方；</li>
+        <li>前期没有标准，最后却按照一个之前没人说过的标准验收。</li>
+      </ul>
+      <p>我比较适合：</p>
+      <blockquote><strong>目标清楚 → 自己做第一版 → 中途确认一次 → 根据反馈继续优化。</strong></blockquote>
+    </div>
+  </article>
+
+  <!-- 04 反馈系统（星星） -->
+  <article class="card" data-key="m04" role="dialog" aria-modal="true" aria-label="04 我的反馈系统">
+    <div class="card-head"><span class="num">04</span><h2 class="ct">我的反馈系统</h2><button class="card-close" data-close>✕</button></div>
+    <div class="card-body">
+      <h3>1. 我希望别人怎么给我正向反馈？</h3>
+      <p>我不太需要很多泛泛的“你做得很好”。</p>
+      <p>如果可以的话，我更希望别人具体告诉我：</p>
+      <ul>
+        <li>哪个地方真的有效；</li>
+        <li>哪个判断比较好；</li>
+        <li>哪种能力可以继续放大；</li>
+        <li>哪个地方比之前有进步。</li>
+      </ul>
+      <p>因为具体的反馈对我下一次做事情更有帮助。</p>
+      <h3>2. 我希望别人怎么指出问题？</h3>
+      <p>我比较能接受直接指出问题。</p>
+      <p>甚至相比：</p>
+      <blockquote>“整体不错，再丰富一点。”</blockquote>
+      <p>我更希望听到：</p>
+      <blockquote>“现在最大的问题是 X，因为 Y，所以建议先改 Z。”</blockquote>
+      <p>对我来说比较有用的反馈结构是：</p>
+      <blockquote><strong>问题在哪里 → 为什么 → 哪个是必须改的 → 可以怎么改。</strong></blockquote>
+      <p>如果还有参考案例，我会更容易理解。</p>
+      <h3>3. 我收到反馈后的习惯</h3>
+      <p>我一般会先把反馈拆开：</p>
+      <p><strong>必须修改 → 建议优化 → 可以以后再做</strong></p>
+      <p>然后先解决最影响结果的问题。</p>
+      <p>我也比较习惯在修改之后再回头看：</p>
+      <blockquote><strong>“为什么我第一次没有想到这个？”</strong></blockquote>
+      <p>如果这个问题以后还会出现，我会希望把它变成自己的检查清单，而不是只修改这一次。</p>
+    </div>
+  </article>
+
+  <!-- 05 压力预警（云朵） -->
+  <article class="card" data-key="m05" role="dialog" aria-modal="true" aria-label="05 我的压力预警系统">
+    <div class="card-head"><span class="num">05</span><h2 class="ct">我的压力预警系统</h2><button class="card-close" data-close>✕</button></div>
+    <div class="card-body">
+      <h3>1. 我压力大时可能出现什么状态？</h3>
+      <p>我压力大的时候不一定会直接表现成“什么都不做”。</p>
+      <p>有时候反而会：</p>
+      <blockquote><strong>想很多、查很多、改很多，但真正提交得比较慢。</strong></blockquote>
+      <p>尤其当我很在意一件事情的时候，我容易不断确认：</p>
+      <blockquote>“这样是不是不够好？”<br>“是不是还有更好的方向？”<br>“是不是应该再改一下？”</blockquote>
+      <p>所以有时候真正的问题不是没有行动，而是：</p>
+      <blockquote><strong>思考和优化超过了实际推进的速度。</strong></blockquote>
+      <h3>2. 别人怎么提醒我比较有效？</h3>
+      <p>如果发现我卡住了，比起一直催我：</p>
+      <blockquote>“怎么还没交？”</blockquote>
+      <p>更有效的是问：</p>
+      <blockquote><strong>“你现在最卡的是哪一步？”</strong></blockquote>
+      <p>然后把任务拆成一个更小的动作。</p>
+      <p>比如：</p>
+      <blockquote>“先别管最终版，今天先把框架交出来。”</blockquote>
+      <p>这种提醒对我比较有效。</p>
+      <h3>3. 什么方式反而会让我更卡？</h3>
+      <p>比较容易让我更焦虑的方式是：</p>
+      <ul>
+        <li>一次性增加很多要求；</li>
+        <li>一直催，但没有告诉我标准；</li>
+        <li>只说结果不好；</li>
+        <li>最后才告诉我前面方向错了；</li>
+        <li>对初稿就要求接近最终版。</li>
+      </ul>
+      <p>我比较适合：</p>
+      <blockquote><strong>先有一个能跑起来的版本，再不断优化。</strong></blockquote>
+    </div>
+  </article>
+
+  <!-- 06 支持系统（小乌龟） -->
+  <article class="card" data-key="m06" role="dialog" aria-modal="true" aria-label="06 我的支持系统">
+    <div class="card-head"><span class="num">06</span><h2 class="ct">我的支持系统</h2><button class="card-close" data-close>✕</button></div>
+    <div class="card-body">
+      <h3>1. 信息支持</h3>
+      <p>我开始做一件事情前，最需要知道：</p>
+      <ul>
+        <li>项目背景；</li>
+        <li>任务目标；</li>
+        <li>最终用途；</li>
+        <li>截止时间；</li>
+        <li>目标对象；</li>
+        <li>基本交付标准。</li>
+      </ul>
+      <p>如果有参考案例，我也会很欢迎。</p>
+      <p>因为我可以自己搜索很多信息，但如果连“我要解决什么问题”都不知道，搜索越多反而越容易跑偏。</p>
+      <h3>2. 资源支持</h3>
+      <p>对我来说比较有帮助的资源包括：</p>
+      <ul>
+        <li>AI 工具；</li>
+        <li>过往案例；</li>
+        <li>项目资料；</li>
+        <li>数据材料；</li>
+        <li>提示词模板；</li>
+        <li>共创会反馈；</li>
+        <li>可以请教的人。</li>
+      </ul>
+      <p>尤其是 AI。</p>
+      <p>我比较习惯根据任务选择不同工具，而不是所有事情都交给同一个 AI。</p>
+      <p>例如：</p>
+      <blockquote><strong>搜索 / 研究 → 分析整理 → 内容生成 → 网站或视觉制作</strong></blockquote>
+      <p>可以让不同工具分别承担比较适合自己的部分。</p>
+      <h3>3. 什么样的节奏比较适合我？</h3>
+      <p>我比较适合：</p>
+      <blockquote><strong>先明确目标 → 拆出第一步 → 先交一个初稿 → 获得反馈 → 再优化。</strong></blockquote>
+      <p>我不太适合一开始就要求自己直接做出最终版。</p>
+      <p>因为很多时候，我只有真正做出第一版之后，才会知道：</p>
+      <blockquote><strong>“原来我真正想做的是这个。”</strong></blockquote>
+      <p>所以对我来说，“先做出来”本身就是思考过程的一部分。</p>
+    </div>
+  </article>
+
+  <!-- 07 团队使用说明（月亮） -->
+  <article class="card" data-key="m07" role="dialog" aria-modal="true" aria-label="07 我的团队使用说明">
+    <div class="card-head"><span class="num">07</span><h2 class="ct">我的团队使用说明</h2><button class="card-close" data-close>✕</button></div>
+    <div class="card-body">
+      <h3>1. 我能为团队提供什么？</h3>
+      <p>如果以后真的一起做项目，我觉得我比较能提供的是：</p>
+      <blockquote><strong>信息搜集 + 用户观察 + 内容整理 + 创意讨论 + AI协作</strong></blockquote>
+      <p>我也愿意做一些别人可能觉得比较琐碎、但决定最后结果质量的事情，比如资料整理、信息核对、结构调整和复盘。</p>
+      <p>我比较希望自己不是只负责一个孤立的小环节，而是能够理解：</p>
+      <blockquote><strong>“我们为什么要做这件事。”</strong></blockquote>
+      <p>这样我会更容易主动发现问题。</p>
+      <h3>2. 什么任务比较适合交给我？</h3>
+      <p>我比较适合：</p>
+      <p><strong>① 前期调研类</strong><br>资料搜集、用户观察、竞品信息整理、访谈/问卷信息整理。</p>
+      <p><strong>② 内容策划类</strong><br>选题、内容框架、文字初稿、信息结构梳理。</p>
+      <p><strong>③ AI 协作类</strong><br>根据任务选择 AI 工具、设计提示词、让 AI 辅助研究/整理/创作，再人工筛选和修改。</p>
+      <h3>3. 什么任务暂时不适合直接交给我？</h3>
+      <p>目前不太适合让我单独负责：</p>
+      <ul>
+        <li>高度专业的数据建模；</li>
+        <li>专业视觉设计；</li>
+        <li>需要很强技术开发能力的任务；</li>
+        <li>完全没有目标和边界、但要求短时间直接交最终版的任务；</li>
+        <li>我完全没有经验，却需要独立对外承担结果的任务。</li>
+      </ul>
+      <p>不是说这些事情我以后不会做，而是目前如果团队需要效率，最好不要默认我是这些任务的最佳人选。</p>
+      <h3>4. 和我协作时，最需要注意什么？</h3>
+      <p>如果要和我合作，我觉得最重要的其实只有几件事：</p>
+      <blockquote><strong>告诉我为什么做。</strong><br><strong>告诉我最后要交什么。</strong><br><strong>告诉我什么时候要。</strong><br><strong>如果方向不对，尽早告诉我。</strong><br><strong>不要把“你自己发挥”当成完整需求。</strong></blockquote>
+      <p>另外，如果我一直在修改而没有提交，可以提醒我：</p>
+      <blockquote><strong>“先交一个版本。”</strong></blockquote>
+      <p>这句话对我可能很有用。</p>
+      <h3>最后，我想对项目团队说</h3>
+      <p>我现在还没有完全想清楚自己未来一定要成为什么样的人。</p>
+      <p>但我比较确定的是，我不想只是为了完成任务而完成任务。</p>
+      <p>我希望自己做的事情能够让我真正学到一点东西，也希望在一个团队里，我不仅是一个“接到任务然后完成的人”，而是能够理解问题、提出自己的判断，并且把事情往前推进的人。</p>
+      <p>这 4 周里，我希望自己可以认真经历一次完整的项目过程：</p>
+      <blockquote><strong>接任务 → 理解问题 → 和 AI 协作 → 自己判断 → 和队友沟通 → 接受反馈 → 修改 → 交付。</strong></blockquote>
+      <p>如果最后留下的不只是一个作品，而是我真的知道：</p>
+      <blockquote><strong>“以后遇到一个陌生任务，我知道该怎么开始了。”</strong></blockquote>
+      <p>那可能就是我这次参加北辰青年最大的收获。</p>
+    </div>
+  </article>
+
+  <!-- AI（坩埚） -->
+  <article class="card" data-key="mai" role="dialog" aria-modal="true" aria-label="AI 在这份说明书里做了什么">
+    <div class="card-head"><span class="num">AI</span><h2 class="ct">AI 在这份说明书里做了什么？</h2><button class="card-close" data-close>✕</button></div>
+    <div class="card-body">
+      <p>这份说明书不是 AI 直接替我写出来的。</p>
+      <p>我让 AI 帮我回顾和整理过去一段时间的对话，从中寻找一些我自己平时不一定会主动总结出来的特点。</p>
+      <p>AI 帮我做的是：</p>
+      <blockquote><strong>提取 → 归纳 → 找规律 → 提出可能的表达。</strong></blockquote>
+      <p>但我会继续判断：</p>
+      <blockquote><strong>“这到底是不是我？”</strong></blockquote>
+      <p>如果只是听起来正确、但不像我的话，我会删掉或重写。</p>
+      <p>所以这份说明书里，我更看重的不是 AI 帮我写得多漂亮，而是：</p>
+      <blockquote><strong>AI 帮我看见了一些东西，而最后怎么定义自己，还是由我自己决定。</strong></blockquote>
+    </div>
+  </article>
+
+</div>
+
+<script>
+  const overlay = document.getElementById('overlay');
+  const hint = document.getElementById('hint');
+  const guide = document.getElementById('guide');
+  const legend = document.getElementById('legend');
+  const legItems = document.getElementById('legItems');
+  const pv = document.getElementById('pv');
+  const pbar = document.getElementById('pbar');
+  const seen = new Set();
+  let firstOpen = false;
+
+  // 给每个热点注入“会动的小提示”，而不是套大圈
+  document.querySelectorAll('.hotspot').forEach(h => {
+    const c = document.createElement('span');
+    c.className = 'cue';
+    h.insertBefore(c, h.firstChild);
+  });
+
+  // 目录数据：key → 图标 + 名称（8 个主章节）
+  const I = (p) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+  const TOC = [
+    {k:'m01', ic:I('<path d="M7.5 10.5a4.5 4.5 0 1 1 9 0c0 2.5-1.2 4.5-4.5 4.5s-4.5-2-4.5-4.5z"/><path d="M9 8.2C8 5.5 8.2 3 9 2.2c.9.6.9 3 0 6z"/><path d="M15 8.2c1-2.7.8-5.2 0-6-.9.6-.9 3 0 6z"/><circle cx="10.2" cy="10.8" r=".7" fill="currentColor" stroke="none"/><circle cx="13.8" cy="10.8" r=".7" fill="currentColor" stroke="none"/><path d="M12 12.4v1.1M11 13.6c.6.7 1.4.7 2 0"/>'), nm:'01 身份定位'},
+    {k:'m02', ic:I('<path d="M15 4 9.2 15.5"/><path d="M9.2 15.5c-1.6 2-2.2 4.2-1.6 4.7 2.2.4 4-1.4 4.9-3.6"/><path d="M9.2 15.5c.6 2.1 2.2 3.7 3.9 4 1.3-1.1.8-3.2-1.1-4.9"/>'), nm:'02 任务系统'},
+    {k:'m03', ic:I('<path d="M12 9c-1.5 0-2.6 1-2.6 2.6 0 1 .7 1.8 1.6 2-.4.6-1 .9-1.6 1 1 .8 2.3 1.2 3.6 1.2s2.6-.4 3.6-1.2c-.6-.1-1.2-.4-1.6-1 .9-.2 1.6-1 1.6-2 0-1.6-1.1-2.6-2.6-2.6z"/><path d="M9.4 11.5C7.4 10.5 5.9 11 5.4 12c1 .8 2.8.8 4 .2z"/><path d="M14.6 11.5c2-1 3.5-.5 4 1-1 .8-2.8.8-4 .2z"/><circle cx="10.6" cy="11.6" r=".5" fill="currentColor" stroke="none"/><circle cx="13.4" cy="11.6" r=".5" fill="currentColor" stroke="none"/>'), nm:'03 沟通系统'},
+    {k:'m04', ic:I('<path d="M12 3c1 5 1 5 6 6-5 1-5 1-6 6-1-5-1-5-6-6 5-1 5-1 6-6z"/>'), nm:'04 反馈系统'},
+    {k:'m05', ic:I('<path d="M7 17.5a4 4 0 0 1 .4-8 5 5 0 0 1 9.6 1.2A3.5 3.5 0 0 1 16.4 17.5z"/>'), nm:'05 压力预警'},
+    {k:'m06', ic:I('<circle cx="12" cy="13" r="4.2"/><path d="M12 8.8V5.2a1.4 1.4 0 1 1 2.4 1"/><path d="M8 13 5.5 11.4M8 16.6 5.5 17.2M16 13l2.5-1.6M16 16.6l2.5.6"/>'), nm:'06 支持系统'},
+    {k:'m07', ic:I('<path d="M15 4a8 8 0 1 0 5 14 6.5 6.5 0 0 1-5-14z"/>'), nm:'07 团队说明'},
+    {k:'mai', ic:I('<path d="M5 11h14a7 7 0 0 1-14 0z"/><path d="M4 11h16"/><path d="M9 8c0-1 .6-2 0-3M12 7.4c0-1 .6-2 0-3M15 8c0-1 .6-2 0-3"/>'), nm:'AI 协作说明'},
+  ];
+  TOC.forEach(t => {
+    const b = document.createElement('button');
+    b.className = 'litem'; b.dataset.card = t.k;
+    b.innerHTML = `<span class="ic">${t.ic}</span><span class="nm">${t.nm}</span><span class="done">✓</span>`;
+    b.addEventListener('click', () => openCard(t.k, 0.5));
+    legItems.appendChild(b);
+  });
+
+  // 折叠目录
+  document.getElementById('legToggle').addEventListener('click', () => {
+    legend.classList.toggle('collapsed');
+    document.getElementById('legToggle').textContent = legend.classList.contains('collapsed') ? '⟩' : '⟨';
+  });
+
+  function openCard(key, originX){
+    overlay.querySelectorAll('.card').forEach(c => c.classList.remove('show','from-left','from-right'));
+    const card = overlay.querySelector(`.card[data-key="${key}"]`);
+    if (!card) return;
+    // 卡片从被点元素所在的一侧滑入，并建立空间连续感
+    card.classList.add(originX < 0.5 ? 'from-left' : 'from-right');
+    card.style.setProperty('--tx', (originX < 0.5 ? -34 : 34) + 'px');
+    card.classList.add('show');
+    overlay.classList.add('open');
+    document.body.classList.add('locked');
+
+    // 高亮对应热点 + 标记已读
+    document.querySelectorAll('.hotspot').forEach(h => {
+      h.classList.toggle('active', h.dataset.card === key);
+      if (h.dataset.card === key) h.classList.add('visited');
+    });
+    const lit = document.querySelector(`.litem[data-card="${key}"]`);
+    if (lit) lit.classList.add('seen');
+
+    if (!seen.has(key)) {
+      seen.add(key);
+      pv.textContent = seen.size;
+      pbar.style.width = (seen.size / TOC.length * 100) + '%';
+      if (seen.size === TOC.length) legend.classList.add('complete');
+    }
+    if (!firstOpen){ firstOpen = true; hint.classList.add('dim'); guide.classList.add('gone'); }
+    card.querySelector('.card-body').scrollTop = 0;
+  }
+
+  document.querySelectorAll('.hotspot').forEach(h => {
+    h.addEventListener('click', () => {
+      const r = h.getBoundingClientRect();
+      openCard(h.dataset.card, (r.left + r.width/2) / window.innerWidth);
+    });
+  });
+
+  function closeCard(){
+    overlay.classList.remove('open');
+    document.body.classList.remove('locked');
+    document.querySelectorAll('.hotspot.active').forEach(h => h.classList.remove('active'));
+  }
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeCard(); });
+  overlay.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', closeCard));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeCard(); });
+</script>
+
+</body>
+</html>
